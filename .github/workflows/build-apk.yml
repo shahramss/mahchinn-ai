@@ -1,0 +1,80 @@
+name: Build MahChin APK
+
+on:
+  workflow_dispatch:
+  push:
+    branches:
+      - main
+      - master
+
+permissions:
+  contents: read
+
+jobs:
+  build-apk:
+    name: Build Debug and Release APK
+    runs-on: ubuntu-latest
+
+    steps:
+      - name: Checkout project
+        uses: actions/checkout@v6
+
+      - name: Set up Java
+        uses: actions/setup-java@v5
+        with:
+          distribution: temurin
+          java-version: '21'
+          cache: gradle
+
+      - name: Set up Android SDK
+        uses: android-actions/setup-android@v3
+
+      - name: Set up Gradle
+        uses: gradle/actions/setup-gradle@v6
+        with:
+          cache-provider: basic
+
+
+      - name: Clean stale launcher duplicates
+        run: |
+          rm -f app/src/main/res/drawable/ic_launcher.png
+          rm -f app/src/main/res/drawable/ic_launcher.webp
+          rm -f app/src/main/res/drawable/ic_launcher.jpg
+          rm -f app/src/main/res/drawable/ic_launcher.jpeg
+
+      - name: Create temporary release keystore
+        run: |
+          keytool -genkeypair -v \
+            -keystore "$GITHUB_WORKSPACE/mahchin-release.jks" \
+            -storepass "mahchin1234" \
+            -keypass "mahchin1234" \
+            -alias "mahchin" \
+            -keyalg RSA \
+            -keysize 2048 \
+            -validity 10000 \
+            -dname "CN=MahChin, OU=Prototype, O=MahChin, L=Tehran, S=Tehran, C=IR"
+
+      - name: Build debug APK
+        run: gradle --no-daemon assembleDebug
+
+      - name: Build signed release APK
+        env:
+          MAHCHIN_KEYSTORE: ${{ github.workspace }}/mahchin-release.jks
+          MAHCHIN_KEYSTORE_PASSWORD: mahchin1234
+          MAHCHIN_KEY_ALIAS: mahchin
+          MAHCHIN_KEY_PASSWORD: mahchin1234
+        run: gradle --no-daemon assembleRelease
+
+      - name: Upload debug APK
+        uses: actions/upload-artifact@v4
+        with:
+          name: MahChin-debug-apk
+          path: app/build/outputs/apk/debug/*.apk
+          if-no-files-found: error
+
+      - name: Upload signed release APK
+        uses: actions/upload-artifact@v4
+        with:
+          name: MahChin-release-apk
+          path: app/build/outputs/apk/release/*.apk
+          if-no-files-found: error
