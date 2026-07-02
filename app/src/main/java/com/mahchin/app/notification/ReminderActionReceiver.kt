@@ -31,7 +31,7 @@ class ReminderActionReceiver : BroadcastReceiver() {
     }
 
     private fun cancel(context: Context) {
-        (context.getSystemService(Context.NOTIFICATION_SERVICE) as NotificationManager).cancel(ReminderWorker.1406)
+        (context.getSystemService(Context.NOTIFICATION_SERVICE) as NotificationManager).cancel(1406)
     }
 
     companion object {
