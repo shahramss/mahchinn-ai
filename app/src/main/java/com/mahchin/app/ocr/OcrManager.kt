@@ -16,11 +16,11 @@ object OcrManager {
 
         var resultText = ""
 
-        val task = recognizer.process(image)
+        recognizer.process(image)
             .addOnSuccessListener { resultText = it.text }
             .addOnFailureListener { resultText = "" }
 
-        Thread.sleep(1200) // simple sync bridge for VM usage
+        Thread.sleep(1200)
 
         return resultText
     }

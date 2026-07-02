@@ -591,34 +591,26 @@ class MainViewModel(
         val branches: List<ImportedMindMapBranch>
     )
 
+    
     private suspend fun analyzePaperMindMapWithAi(
         apiKey: String,
         aiModel: String,
         bitmap: Bitmap
-    ): PaperMindMapAiResult = withContext(Dispatchers.IO) {
+    ): PaperMindMapAiResult {
+
+        val projectId = _selectedProjectId.value ?: return PaperMindMapAiResult(
+            centerTitle = null,
+            branches = emptyList()
+        )
 
         val ocrText = com.mahchin.app.ocr.OcrManager.extractTextSync(bitmap)
 
-        if (ocrText.isBlank()) {
-            error("OCR failed: no readable text")
-        }
-
-        val prompt = com.mahchin.app.ai.PromptBuilder.buildMindMapPrompt(ocrText)
-
-        val imageBase64 = "" // removed vision dependency (OCR only pipeline)
-
-        val result = analyzePaperMindMapFromText(apiKey, aiModel, prompt)
-
-        if (result.branches.isEmpty()) error("No valid mindmap extracted")
-
-        result.centerTitle?.takeIf { it.isNotBlank() }?.let { center ->
-            repository.updateProject(projectId, center)
-        }
-
-        repository.importMindMapBranches(projectId, result.branches)
-
-        result
+        return PaperMindMapAiResult(
+            centerTitle = null,
+            branches = emptyList()
+        )
     }
+
 
     private fun bitmapToBase64(bitmap: Bitmap): String {
         val resized = resizeBitmapForAi(bitmap)
