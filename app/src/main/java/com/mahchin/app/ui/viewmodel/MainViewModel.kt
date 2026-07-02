@@ -592,23 +592,83 @@ class MainViewModel(
     )
 
     
-    private suspend fun analyzePaperMindMapWithAi(
-        apiKey: String,
-        aiModel: String,
-        bitmap: Bitmap
-    ): PaperMindMapAiResult {
+        private suspend fun analyzePaperMindMapWithAi(apiKey: String, aiModel: String, bitmap: Bitmap): PaperMindMapAiResult = withContext(Dispatchers.IO) {
+        val imageBase64 = bitmapToBase64(bitmap)
 
-        val projectId = _selectedProjectId.value ?: return PaperMindMapAiResult(
-            centerTitle = null,
-            branches = emptyList()
-        )
+        val prompt = """
+            تو باید از روی عکس، فقط نوشته‌های واقعی روی کاغذ را بخوانی و به مایندمپ تبدیل کنی.
 
-        val ocrText = com.mahchin.app.ocr.OcrManager.extractTextSync(bitmap)
+            زبان نوشته‌ها فارسی است و ممکن است دست‌نویس باشند.
 
-        return PaperMindMapAiResult(
-            centerTitle = null,
-            branches = emptyList()
-        )
+            قوانین:
+            1) متن جدید نساز.
+            2) توضیح آموزشی اضافه نکن.
+            3) اگر ساختار شاخه‌ها مشخص بود، همان ساختار را بساز.
+            4) اگر ساختار شاخه‌ها مشخص نبود ولی متن‌ها خوانا بودند، متن‌ها را به صورت نودهای جداگانه برگردان.
+            5) اگر یک کلمه کمی نامطمئن بود، نزدیک‌ترین متن خوانده‌شده را بنویس، ولی جمله جدید نساز.
+            6) centerTitle را از متن مرکزی یا بزرگ‌ترین/اصلی‌ترین نوشته تصویر انتخاب کن.
+            7) visibleTexts باید شامل تمام نوشته‌های خوانده‌شده از عکس باشد.
+            8) فقط JSON معتبر بده. هیچ متن اضافه، Markdown یا code block نده.
+
+            خروجی دقیقاً این ساختار باشد:
+            {
+              "centerTitle": "",
+              "visibleTexts": [],
+              "nodes": [
+                {
+                  "title": "",
+                  "children": []
+                }
+              ]
+            }
+        """.trimIndent()
+
+        val isGpt5Family = aiModel.startsWith("gpt-5")
+        val requestJson = JSONObject()
+            .put("model", aiModel)
+            .put(if (isGpt5Family) "max_completion_tokens" else "max_tokens", 3000)
+            .put("response_format", JSONObject().put("type", "json_object"))
+            .put("messages", JSONArray().put(
+                JSONObject()
+                    .put("role", "user")
+                    .put("content", JSONArray()
+                        .put(JSONObject().put("type", "text").put("text", prompt))
+                        .put(JSONObject().put("type", "image_url").put("image_url", JSONObject()
+                            .put("url", "data:image/jpeg;base64,$imageBase64")
+                            .put("detail", "high")
+                        ))
+                    )
+            ))
+
+        if (!isGpt5Family) requestJson.put("temperature", 0)
+
+        val connection = (URL("https://api.openai.com/v1/chat/completions").openConnection() as HttpURLConnection).apply {
+            requestMethod = "POST"
+            connectTimeout = 45_000
+            readTimeout = 90_000
+            doOutput = true
+            setRequestProperty("Authorization", "Bearer $apiKey")
+            setRequestProperty("Content-Type", "application/json; charset=utf-8")
+        }
+
+        connection.outputStream.use {
+            it.write(requestJson.toString().toByteArray(Charsets.UTF_8))
+        }
+
+        val responseText = if (connection.responseCode in 200..299) {
+            connection.inputStream.bufferedReader(Charsets.UTF_8).use { it.readText() }
+        } else {
+            val errorText = connection.errorStream?.bufferedReader(Charsets.UTF_8)?.use { it.readText() }.orEmpty()
+            error("پاسخ ناموفق هوش مصنوعی: ${connection.responseCode} $errorText")
+        }
+
+        val content = JSONObject(responseText)
+            .getJSONArray("choices")
+            .getJSONObject(0)
+            .getJSONObject("message")
+            .getString("content")
+
+        parseImportedMindMapJson(content)
     }
 
 
@@ -657,7 +717,18 @@ class MainViewModel(
                 parseNode(obj)?.let { add(it) }
             }
         }
-        return PaperMindMapAiResult(centerTitle = centerTitle.ifBlank { null }, branches = branches)
+                val finalBranches = if (branches.isNotEmpty()) {
+            branches
+        } else {
+            val visibleTexts = json.optJSONArray("visibleTexts") ?: JSONArray()
+            buildList {
+                for (i in 0 until visibleTexts.length()) {
+                    val title = cleanAiTitle(visibleTexts.optString(i, "").trim())
+                    if (title.isNotBlank() && title != centerTitle) add(ImportedMindMapBranch(title, emptyList()))
+                }
+            }
+        }
+        return PaperMindMapAiResult(centerTitle = centerTitle.ifBlank { null }, branches = finalBranches)
     }
 
     private fun cleanAiTitle(value: String): String {
