@@ -83,8 +83,5 @@ fun TaskEditorDialog(
     )
 }
 
-@Composable fun JalaliDateDialog(onDismiss: ()->Unit = {}, onSave:(String)->Unit = {})
-@Composable fun TaskAlarmDialog(onDismiss:()->Unit = {}, onSave:(String,Int,Int)->Unit = {_,_,_->})
-@Composable fun VoiceOutlinedTextField(value:String,onValueChange:(String)->Unit,modifier:Modifier=Modifier){
     OutlinedTextField(value,onValueChange,modifier,label={Text("")})
 }
