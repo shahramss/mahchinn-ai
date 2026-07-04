@@ -300,3 +300,60 @@ private fun DateField(label: String, value: String, onValueChange: (String) -> U
         modifier = modifier.padding(top = 4.dp)
     )
 }
+
+
+
+
+@OptIn(ExperimentalMaterial3Api::class)
+@Composable
+fun SearchableProjectDropdown(
+    projects: List<Project>,
+    selected: Project?,
+    onSelect: (Project) -> Unit,
+    modifier: Modifier = Modifier
+) {
+    var expanded by remember { mutableStateOf(false) }
+    var query by remember { mutableStateOf("") }
+
+    val filtered = remember(query, projects) {
+        if (query.isBlank()) projects
+        else projects.filter {
+            it.name.contains(query, ignoreCase = true)
+        }
+    }
+
+    ExposedDropdownMenuBox(
+        expanded = expanded,
+        onExpandedChange = { expanded = !expanded }
+    ) {
+        OutlinedTextField(
+            modifier = modifier.menuAnchor(),
+            value = selected?.name ?: query,
+            onValueChange = {
+                query = it
+                expanded = true
+            },
+            readOnly = false,
+            label = { Text("انتخاب پروژه") },
+            trailingIcon = {
+                ExposedDropdownMenuDefaults.TrailingIcon(expanded = expanded)
+            }
+        )
+
+        ExposedDropdownMenu(
+            expanded = expanded,
+            onDismissRequest = { expanded = false }
+        ) {
+            filtered.forEach { project ->
+                DropdownMenuItem(
+                    text = { Text(project.name) },
+                    onClick = {
+                        onSelect(project)
+                        query = project.name
+                        expanded = false
+                    }
+                )
+            }
+        }
+    }
+}
