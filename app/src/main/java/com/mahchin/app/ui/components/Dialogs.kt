@@ -139,23 +139,18 @@ fun TaskEditorDialog(
                         modifier = Modifier.fillMaxWidth()
                     )
                 }
-                if (projects.isNotEmpty()) {
-                    ExposedDropdownMenuBox(expanded = expandedProject, onExpandedChange = { expandedProject = !expandedProject }) {
-                        OutlinedTextField(
-                            value = projects.firstOrNull { it.id == selectedProjectId }?.name ?: "بدون پروژه",
-                            onValueChange = {},
-                            readOnly = true,
-                            label = { Text("پروژه") },
-                            trailingIcon = { ExposedDropdownMenuDefaults.TrailingIcon(expandedProject) },
-                            modifier = Modifier.menuAnchor().fillMaxWidth()
-                        )
-                        ExposedDropdownMenu(expanded = expandedProject, onDismissRequest = { expandedProject = false }) {
-                            DropdownMenuItem(text = { Text("بدون پروژه") }, onClick = { selectedProjectId = null; expandedProject = false })
-                            projects.forEach { p ->
-                                DropdownMenuItem(text = { Text(p.name) }, onClick = { selectedProjectId = p.id; expandedProject = false })
-                            }
-                        }
-                    }
+                
+if (projects.isNotEmpty()) {
+    SearchableProjectDropdown(
+        projects = projects,
+        selected = projects.firstOrNull { it.id == selectedProjectId },
+        onSelect = { project ->
+            selectedProjectId = project.id
+        },
+        modifier = Modifier.fillMaxWidth()
+    )
+}
+
                 }
                 ExposedDropdownMenuBox(expanded = expandedPriority, onExpandedChange = { expandedPriority = !expandedPriority }) {
                     OutlinedTextField(
