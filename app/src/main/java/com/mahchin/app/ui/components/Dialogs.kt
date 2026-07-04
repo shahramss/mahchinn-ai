@@ -139,23 +139,18 @@ fun TaskEditorDialog(
                         modifier = Modifier.fillMaxWidth()
                     )
                 }
-                if (projects.isNotEmpty()) {
-                    ExposedDropdownMenuBox(expanded = expandedProject, onExpandedChange = { expandedProject = !expandedProject }) {
-                        OutlinedTextField(
-                            value = projects.firstOrNull { it.id == selectedProjectId }?.name ?: "بدون پروژه",
-                            onValueChange = {},
-                            readOnly = true,
-                            label = { Text("پروژه") },
-                            trailingIcon = { ExposedDropdownMenuDefaults.TrailingIcon(expandedProject) },
-                            modifier = Modifier.menuAnchor().fillMaxWidth()
-                        )
-                        ExposedDropdownMenu(expanded = expandedProject, onDismissRequest = { expandedProject = false }) {
-                            DropdownMenuItem(text = { Text("بدون پروژه") }, onClick = { selectedProjectId = null; expandedProject = false })
-                            projects.forEach { p ->
-                                DropdownMenuItem(text = { Text(p.name) }, onClick = { selectedProjectId = p.id; expandedProject = false })
-                            }
-                        }
-                    }
+                
+if (projects.isNotEmpty()) {
+    SearchableProjectDropdown(
+        projects = projects,
+        selected = projects.firstOrNull { it.id == selectedProjectId },
+        onSelect = { project ->
+            selectedProjectId = project.id
+        },
+        modifier = Modifier.fillMaxWidth()
+    )
+}
+
                 }
                 ExposedDropdownMenuBox(expanded = expandedPriority, onExpandedChange = { expandedPriority = !expandedPriority }) {
                     OutlinedTextField(
@@ -299,61 +294,4 @@ private fun DateField(label: String, value: String, onValueChange: (String) -> U
         singleLine = true,
         modifier = modifier.padding(top = 4.dp)
     )
-}
-
-
-
-
-@OptIn(ExperimentalMaterial3Api::class)
-@Composable
-fun SearchableProjectDropdown(
-    projects: List<Project>,
-    selected: Project?,
-    onSelect: (Project) -> Unit,
-    modifier: Modifier = Modifier
-) {
-    var expanded by remember { mutableStateOf(false) }
-    var query by remember { mutableStateOf("") }
-
-    val filtered = remember(query, projects) {
-        if (query.isBlank()) projects
-        else projects.filter {
-            it.name.contains(query, ignoreCase = true)
-        }
-    }
-
-    ExposedDropdownMenuBox(
-        expanded = expanded,
-        onExpandedChange = { expanded = !expanded }
-    ) {
-        OutlinedTextField(
-            modifier = modifier.menuAnchor(),
-            value = selected?.name ?: query,
-            onValueChange = {
-                query = it
-                expanded = true
-            },
-            readOnly = false,
-            label = { Text("انتخاب پروژه") },
-            trailingIcon = {
-                ExposedDropdownMenuDefaults.TrailingIcon(expanded = expanded)
-            }
-        )
-
-        ExposedDropdownMenu(
-            expanded = expanded,
-            onDismissRequest = { expanded = false }
-        ) {
-            filtered.forEach { project ->
-                DropdownMenuItem(
-                    text = { Text(project.name) },
-                    onClick = {
-                        onSelect(project)
-                        query = project.name
-                        expanded = false
-                    }
-                )
-            }
-        }
-    }
 }
