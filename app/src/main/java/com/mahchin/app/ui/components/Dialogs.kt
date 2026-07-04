@@ -2,15 +2,12 @@
 package com.mahchin.app.ui.components
 
 import androidx.compose.runtime.*
-import androidx.compose.ui.Modifier
 import androidx.compose.foundation.layout.*
 import androidx.compose.material3.*
+import androidx.compose.ui.Modifier
 import androidx.compose.ui.unit.dp
-import androidx.compose.ui.text.input.KeyboardOptions
-import androidx.compose.ui.text.input.KeyboardType
 import com.mahchin.app.data.model.Project
 
-@OptIn(ExperimentalMaterial3Api::class)
 @Composable
 fun SearchableProjectDropdown(
     projects: List<Project>,
@@ -22,34 +19,28 @@ fun SearchableProjectDropdown(
 
     val filtered = remember(search, projects) {
         if (search.isBlank()) projects
-        else projects.filter { it.name.contains(search, ignoreCase = true) }
+        else projects.filter { it.name.contains(search, true) }
     }
 
     Column {
-
         OutlinedButton(onClick = { expanded = true }) {
             Text(projects.find { it.id == selectedId }?.name ?: "انتخاب پروژه")
         }
 
-        DropdownMenu(
-            expanded = expanded,
-            onDismissRequest = { expanded = false; search = "" }
-        ) {
+        DropdownMenu(expanded = expanded, onDismissRequest = { expanded = false; search = "" }) {
 
             OutlinedTextField(
                 value = search,
                 onValueChange = { search = it },
                 modifier = Modifier.fillMaxWidth(),
-                label = { Text("جستجو پروژه") }
+                label = { Text("جستجو") }
             )
 
-            Divider()
-
-            filtered.forEach { p ->
+            filtered.forEach {
                 DropdownMenuItem(
-                    text = { Text(p.name) },
+                    text = { Text(it.name) },
                     onClick = {
-                        onSelect(p)
+                        onSelect(it)
                         expanded = false
                         search = ""
                     }
@@ -70,13 +61,12 @@ fun TaskEditorDialog(
 ) {
     var title by remember { mutableStateOf(initialTitle) }
     var desc by remember { mutableStateOf(initialDescription) }
-    var projectId by remember { mutableStateOf(selectedProjectId) }
 
     AlertDialog(
         onDismissRequest = onDismiss,
         confirmButton = {
             TextButton(onClick = {
-                onSave(title, desc, projectId)
+                onSave(title, desc, selectedProjectId)
                 onDismiss()
             }) { Text("OK") }
         },
@@ -86,30 +76,15 @@ fun TaskEditorDialog(
         title = { Text(titleText) },
         text = {
             Column {
-                OutlinedTextField(
-                    value = title,
-                    onValueChange = { title = it },
-                    modifier = Modifier.fillMaxWidth(),
-                    label = { Text("عنوان") }
-                )
-
-                OutlinedTextField(
-                    value = desc,
-                    onValueChange = { desc = it },
-                    modifier = Modifier.fillMaxWidth(),
-                    label = { Text("توضیحات") }
-                )
-
-                Spacer(Modifier.height(8.dp))
-
-                Text("Project ID: ${projectId ?: -1}")
+                OutlinedTextField(value = title, onValueChange = { title = it }, label = { Text("عنوان") })
+                OutlinedTextField(value = desc, onValueChange = { desc = it }, label = { Text("توضیحات") })
             }
         }
     )
 }
 
-@Composable fun JalaliDateDialog() {}
-@Composable fun TaskAlarmDialog() {}
+@Composable fun JalaliDateDialog(onDismiss: ()->Unit = {}, onSave:(String)->Unit = {})
+@Composable fun TaskAlarmDialog(onDismiss:()->Unit = {}, onSave:(String,Int,Int)->Unit = {_,_,_->})
 @Composable fun VoiceOutlinedTextField(value:String,onValueChange:(String)->Unit,modifier:Modifier=Modifier){
-    OutlinedTextField(value,onValueChange,modifier)
+    OutlinedTextField(value,onValueChange,modifier,label={Text("")})
 }
