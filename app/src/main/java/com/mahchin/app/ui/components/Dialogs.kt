@@ -82,6 +82,3 @@ fun TaskEditorDialog(
         }
     )
 }
-
-    OutlinedTextField(value,onValueChange,modifier,label={Text("")})
-}
